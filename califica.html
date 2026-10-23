@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Califica tu visita</title>
+<meta name="description" content="Cuéntanos cómo te fue. Toma menos de un minuto.">
+<meta property="og:title" content="Califica tu visita">
+<meta property="og:description" content="Cuéntanos cómo te fue. Toma menos de un minuto.">
+<meta name="theme-color" content="#15171a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Cpath fill=%22%23f5b301%22 d=%22M12 1.8l3.1 6.4 7 .9-5.1 4.9 1.3 7L12 17.6 5.7 21l1.3-7L1.9 9.1l7-.9z%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: una sola columna centrada estilo tarjeta de recibo — monograma, nombre, estrellas grandes, comentario y un solo botón. El dorado vive solo en las estrellas. */
+:root{
+  --bg:#f6f6f4; --surface:#ffffff; --ink:#15171a; --muted:#6b6f76; --line:#e4e4e0;
+  --gold:#f5b301; --gold-soft:#fff6d9; --star-off:#dcdcd6; --ok:#1d8a52;
+  --font:"Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101113; --surface:#18191c; --ink:#f1f1ef; --muted:#9a9ea5; --line:#2a2c30;
+  --gold:#ffc21a; --gold-soft:#2b2410; --star-off:#34363b; --ok:#4cc985; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101113; --surface:#18191c; --ink:#f1f1ef; --muted:#9a9ea5; --line:#2a2c30;
+  --gold:#ffc21a; --gold-soft:#2b2410; --star-off:#34363b; --ok:#4cc985; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:40px 56px}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:20}
+.card{max-width:440px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:28px;padding:36px 28px 28px;display:flex;flex-direction:column;align-items:center;gap:26px;text-align:center;
+  box-shadow:0 1px 0 rgba(0,0,0,.02), 0 24px 60px -28px rgba(0,0,0,.18);animation:in .6s cubic-bezier(.2,1,.3,1) both}
+@keyframes in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+.brand{display:flex;flex-direction:column;align-items:center;gap:14px}
+.mono{width:68px;height:68px;border-radius:20px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:800;font-size:28px;letter-spacing:-.02em}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0}
+h1{font-size:clamp(24px,6vw,30px);font-weight:800;line-height:1.1;letter-spacing:-.02em;margin:0;text-wrap:balance}
+
+.rate{display:flex;flex-direction:column;align-items:center;gap:10px}
+.stars{display:flex;gap:6px}
+.star{appearance:none;background:none;border:0;padding:4px;cursor:pointer;color:var(--star-off);line-height:0;border-radius:12px;transition:transform .15s}
+.star svg{width:clamp(44px,12vw,54px);height:auto;transition:color .2s, filter .3s}
+.star.on{color:var(--gold)}
+.star.on svg{filter:drop-shadow(0 6px 14px color-mix(in srgb, var(--gold) 45%, transparent))}
+.star:hover{transform:scale(1.08)}
+.star:active{transform:scale(.9)}
+.star:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.star.bump{animation:bump .45s cubic-bezier(.34,1.9,.5,1)}
+@keyframes bump{0%{transform:scale(.6)}100%{transform:scale(1)}}
+.rlabel{font-weight:700;font-size:17px;min-height:1.5em}
+
+.comment{width:100%;display:flex;flex-direction:column;gap:10px;text-align:left}
+.comment label{font-size:13px;font-weight:600;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{appearance:none;font:500 14px var(--font);color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:99px;padding:7px 13px;cursor:pointer;transition:background .2s,border-color .2s,transform .1s}
+.chip:active{transform:scale(.95)}
+.chip[aria-pressed="true"]{background:var(--gold-soft);border-color:var(--gold)}
+.chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+textarea{width:100%;font:400 15px/1.5 var(--font);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px 16px;resize:none;min-height:96px;outline:none;transition:border-color .2s}
+textarea:focus{border-color:var(--ink)}
+
+.cta{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;font:700 17px var(--font);color:var(--bg);background:var(--ink);border-radius:18px;padding:18px 20px;text-decoration:none;transition:transform .12s, opacity .2s}
+.cta:hover{opacity:.92}
+.cta:active{transform:scale(.97)}
+.cta:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.cta svg{width:18px;height:18px}
+.fine{font-size:13px;color:var(--muted);margin:-12px 0 0}
+
+/* Paso final */
+.done{display:flex;flex-direction:column;align-items:center;gap:18px;width:100%}
+.check{width:64px;height:64px;border-radius:50%;background:var(--gold-soft);color:var(--gold);display:grid;place-items:center;animation:bump .5s cubic-bezier(.34,1.9,.5,1)}
+.check svg{width:30px;height:30px}
+.done h2{font-size:24px;font-weight:800;margin:0;letter-spacing:-.02em}
+.steps{list-style:none;margin:0;padding:0;width:100%;display:flex;flex-direction:column;gap:10px;text-align:left}
+.steps li{display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;background:var(--bg);border-radius:14px;padding:12px 14px}
+.steps .n{width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:700;font-size:14px}
+.steps b{font-weight:700}
+.mini{color:var(--gold);letter-spacing:1px}
+.link2{font:600 15px var(--font);color:var(--ink);background:none;border:1px solid var(--line);border-radius:14px;padding:12px 16px;text-decoration:none;width:100%;text-align:center}
+.foot{max-width:440px;margin:18px auto 0;text-align:center;font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="fx" aria-hidden="true"></canvas>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="s" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.2l2.95 6.1 6.7.85-4.9 4.65 1.25 6.65L12 17.2l-6 3.25 1.25-6.65-4.9-4.65 6.7-.85z"/></symbol>
+</svg>
+
+<main class="card" id="card">
+  <div class="brand">
+    <div class="mono" id="mono" aria-hidden="true">R</div>
+    <p class="eyebrow">Gracias por tu visita</p>
+    <h1 id="bname">Radec Autopartes CR Tijuana</h1>
+  </div>
+
+  <div id="step1" style="display:contents">
+    <div class="rate">
+      <div class="stars" id="stars" role="radiogroup" aria-label="Calificación"></div>
+      <div class="rlabel" id="rlabel" aria-live="polite">¡Excelente!</div>
+    </div>
+
+    <div class="comment">
+      <label for="txt">¿Qué fue lo mejor? (opcional)</label>
+      <div class="chips" id="chips"></div>
+      <textarea id="txt" placeholder="Escribe aquí tu comentario…"></textarea>
+    </div>
+
+    <a class="cta" id="cta" href="#" target="_blank" rel="noopener">
+      Publicar en Google
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>
+    </a>
+    <p class="fine">Se abre Google con tu comentario copiado.</p>
+  </div>
+
+  <div class="done" id="step2" hidden>
+    <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h2>¡Ya casi!</h2>
+    <ol class="steps">
+      <li><span class="n">1</span><span>En Google, toca <b id="rtxt">las 5 estrellas</b> <span class="mini" id="rmini">★★★★★</span></span></li>
+      <li id="pasteStep"><span class="n">2</span><span>Mantén presionado el cuadro de texto y elige <b>Pegar</b>. Tu comentario ya está copiado.</span></li>
+      <li><span class="n" id="lastN">3</span><span>Toca <b>Publicar</b>. ¡Listo!</span></li>
+    </ol>
+    <a class="link2" id="again" href="#" target="_blank" rel="noopener">¿No se abrió Google? Ábrelo aquí</a>
+  </div>
+</main>
+<p class="foot">Las reseñas se publican en Google. Tu opinión, sea cual sea, ayuda a mejorar.</p>
+
+<script>
+const $=id=>document.getElementById(id);
+const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+const DEMO={id:"ChIJ4cKNThg52YARMnroTn-JaI0",name:"Radec Autopartes CR Tijuana"};
+
+function b64urlDecode(s){
+  s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";
+  try{return decodeURIComponent(escape(atob(s)));}catch(e){return "";}
+}
+function readBiz(){
+  const h=(location.hash||"").slice(1);
+  if(!h) return DEMO;
+  const [id,nm]=h.split("~");
+  if(!/^(ChIJ|GhIJ)[A-Za-z0-9_-]{20,}$/.test(id||"")) return DEMO;
+  return {id,name:nm?b64urlDecode(nm):""};
+}
+const biz=readBiz();
+const REVIEW="https://search.google.com/local/writereview?placeid="+biz.id;
+const name=biz.name||"nuestro negocio";
+$("bname").textContent=biz.name||"Califica tu visita";
+document.title=biz.name?"Califica "+biz.name:"Califica tu visita";
+$("mono").textContent=(biz.name||"★").trim().charAt(0).toUpperCase();
+$("cta").href=REVIEW;$("again").href=REVIEW;
+
+/* Estrellas */
+const LABELS=["","Malo","Regular","Bien","¡Muy bien!","¡Excelente!"];
+let rating=5;
+const starsEl=$("stars");
+for(let i=1;i<=5;i++){
+  const b=document.createElement("button");
+  b.type="button";b.className="star";b.setAttribute("role","radio");b.setAttribute("aria-label",i+" estrella"+(i>1?"s":""));
+  b.innerHTML='<svg viewBox="0 0 24 24"><use href="#s"/></svg>';
+  b.addEventListener("click",()=>setRating(i,true));
+  starsEl.appendChild(b);
+}
+function setRating(n,anim){
+  rating=n;
+  [...starsEl.children].forEach((b,i)=>{
+    const on=i<n;b.classList.toggle("on",on);b.setAttribute("aria-checked",i===n-1?"true":"false");
+    if(anim&&on&&!reduce){b.classList.remove("bump");void b.offsetWidth;setTimeout(()=>b.classList.add("bump"),i*45);}
+  });
+  $("rlabel").textContent=LABELS[n];
+  if(anim&&n===5){const r=starsEl.getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,18);}
+}
+
+/* Chips */
+const CHIPS=["Excelente atención","Muy rápido","Buen precio","Lo recomiendo","Todo muy limpio","Volveré"];
+CHIPS.forEach(t=>{
+  const c=document.createElement("button");c.type="button";c.className="chip";c.textContent=t;c.setAttribute("aria-pressed","false");
+  c.addEventListener("click",()=>{
+    const on=c.getAttribute("aria-pressed")!=="true";c.setAttribute("aria-pressed",on);
+    let parts=$("txt").value.split(/\.\s*/).map(s=>s.trim()).filter(Boolean);
+    if(on&&!parts.includes(t))parts.push(t);
+    if(!on)parts=parts.filter(p=>p!==t);
+    $("txt").value=parts.length?parts.join(". ")+".":"";
+  });
+  $("chips").appendChild(c);
+});
+$("txt").addEventListener("input",()=>{
+  [...$("chips").children].forEach(c=>c.setAttribute("aria-pressed",$("txt").value.includes(c.textContent)));
+});
+
+/* Enviar */
+$("cta").addEventListener("click",()=>{
+  const text=$("txt").value.trim();
+  if(text&&navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).catch(()=>{});}
+  $("rtxt").textContent=rating===1?"1 estrella":(rating===5?"las 5 estrellas":rating+" estrellas");
+  $("rmini").textContent="★".repeat(rating);
+  $("pasteStep").hidden=!text;$("lastN").textContent=text?"3":"2";
+  setTimeout(()=>{
+    $("step1").hidden=true;$("step1").style.display="none";$("step2").hidden=false;
+    const r=$("card").getBoundingClientRect();burst(r.left+r.width/2,r.top+90,30);
+  },250);
+});
+
+/* Partículas */
+const fx=$("fx"),ctx=fx.getContext("2d");let parts=[],running=false;
+function size(){const d=Math.min(devicePixelRatio||1,2);fx.width=innerWidth*d;fx.height=innerHeight*d;ctx.setTransform(d,0,0,d,0,0);}
+addEventListener("resize",size);size();
+function star(x,y,r,rot){ctx.beginPath();for(let i=0;i<10;i++){const rr=i%2?r*.45:r,a=rot+i*Math.PI/5-Math.PI/2;ctx.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr);}ctx.closePath();}
+function burst(x,y,n){
+  if(reduce)return;
+  const gold=getComputedStyle(document.documentElement).getPropertyValue("--gold").trim()||"#f5b301";
+  for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,v=3+Math.random()*6;parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-2.5,r:3+Math.random()*6,rot:Math.random()*6,vr:(Math.random()-.5)*.3,life:1,c:i%3?gold:"#ffe08a"});}
+  if(!running){running=true;requestAnimationFrame(step);}
+}
+function step(){
+  ctx.clearRect(0,0,innerWidth,innerHeight);parts=parts.filter(p=>p.life>0);
+  for(const p of parts){p.vy+=.22;p.vx*=.985;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;p.life-=.02;ctx.globalAlpha=Math.max(p.life,0);ctx.fillStyle=p.c;star(p.x,p.y,p.r,p.rot);ctx.fill();}
+  ctx.globalAlpha=1;if(parts.length)requestAnimationFrame(step);else{running=false;ctx.clearRect(0,0,innerWidth,innerHeight);}
+}
+
+setRating(5,false);
+if(!reduce)setTimeout(()=>setRating(5,true),450);
+</script>
+</body>
+</html>
