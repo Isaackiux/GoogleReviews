@@ -14,6 +14,6 @@ Herramientas para conseguir más reseñas en Google.
 
 ## Notas
 
-- Usa el link largo de la ficha del negocio. Los links cortos (`maps.app.goo.gl`) hay que abrirlos primero en el navegador y copiar el link completo.
+- Acepta links largos y cortos (`maps.app.goo.gl`). Los cortos se abren a través de servicios públicos de proxy (allorigins, corsproxy, codetabs); si ninguno responde, la página muestra cómo copiar el link largo a mano.
 - El negocio viaja en el link (`califica.html#<PlaceID>~<nombre>`), así que no hace falta servidor ni base de datos.
 - Google no acepta una calificación desde fuera de su formulario. El cliente confirma las estrellas en Google, y la página le indica cuáles tocar.

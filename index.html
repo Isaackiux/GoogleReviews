@@ -127,7 +127,7 @@ textarea#note:focus{border-color:var(--gold)}
       </button>
       <button class="ghost" id="clear" type="button">Limpiar</button>
     </div>
-    <p class="hint">Usa el link largo de la ficha del negocio. También acepta un Place ID (ChIJ…).</p>
+    <p class="hint">Acepta links largos, links cortos de compartir (maps.app.goo.gl) y Place ID (ChIJ…).</p>
   </section>
 
   <div class="alert" id="msg" hidden></div>
@@ -203,14 +203,14 @@ function nameFrom(url){
   if(!m) return "";
   try{return decodeURIComponent(m[1].replace(/\+/g," "));}catch(e){return m[1];}
 }
-const SHORT_HELP = `<strong>Ese es un link corto</strong>
-<p>Los links <b>maps.app.goo.gl</b> solo redirigen, y esta página no puede seguirlos. Haz esto:</p>
+const SHORT_HELP = `<strong>No pude abrir ese link corto</strong>
+<p>Intenté abrir el link <b>maps.app.goo.gl</b> automáticamente, pero no respondió. Hazlo a mano:</p>
 <ol><li>Abre el link en el navegador (Chrome o Safari, no la app de Maps).</li><li>Espera a que cargue la ficha del negocio.</li><li>Copia el link completo de la barra de direcciones y pégalo aquí.</li></ol>`;
 function parse(raw){
   const text=raw.trim();
   if(!text) return {error:"<strong>Falta el link</strong><p>Pega primero el link del negocio.</p>"};
   let dec=text;try{dec=decodeURIComponent(text);}catch(e){}
-  if(/maps\.app\.goo\.gl|goo\.gl\/maps|g\.co\/kgs/i.test(dec)) return {error:SHORT_HELP};
+  if(isShort(dec)) return {error:SHORT_HELP};
   const pid=dec.match(/\b(ChIJ[A-Za-z0-9_-]{20,}|GhIJ[A-Za-z0-9_-]{20,})/);
   if(pid) return {placeId:pid[1],name:nameFrom(dec),via:"Place ID"};
   const fid=dec.match(/(0x[0-9a-f]{1,16}):(0x[0-9a-f]{1,16})/i);
@@ -219,8 +219,72 @@ function parse(raw){
   return {error:"<strong>No encontré el negocio en ese link</strong><p>Abre la ficha del negocio en Google Maps (donde ves su nombre, fotos y reseñas) y copia el link completo.</p>"};
 }
 
-function render(animate){
-  const r=parse($("src").value);
+/* ---------- links cortos ---------- */
+const isShort=u=>/maps\.app\.goo\.gl|goo\.gl\/maps|g\.co\/kgs/i.test(u);
+const shortCache={};
+try{Object.assign(shortCache,JSON.parse(localStorage.getItem("shortCache")||"{}"));}catch(e){}
+const PROXIES=[
+  u=>({url:"https://api.allorigins.win/get?url="+encodeURIComponent(u),json:true}),
+  u=>({url:"https://corsproxy.io/?url="+encodeURIComponent(u)}),
+  u=>({url:"https://api.codetabs.com/v1/proxy/?quest="+encodeURIComponent(u)}),
+  u=>({url:"https://api.allorigins.win/raw?url="+encodeURIComponent(u)})
+];
+function htmlDecode(t){const el=document.createElement("textarea");el.innerHTML=t;return el.value;}
+function extract(finalUrl,body){
+  const dec=t=>{let x=t||"";for(let i=0;i<2;i++){try{x=decodeURIComponent(x);}catch(e){break;}}return x;};
+  const F=/(0x[0-9a-f]{1,16}):(0x[0-9a-f]{1,16})/i;
+  let fid=null,name="";
+  const fu=dec(finalUrl);
+  if(fu){const m=fu.match(F);if(m)fid=m[0];name=nameFrom(fu);}
+  if(!fid&&body){
+    const b=dec(body.replace(/\\u003d/g,"=").replace(/\\u0026/g,"&"));
+    const place=b.match(/\/maps\/place\/[^"'\s<>]*?!1s(0x[0-9a-f]{1,16}:0x[0-9a-f]{1,16})/i);
+    if(place){fid=place[1];if(!name)name=nameFrom(place[0]);}
+    if(!fid){const m=b.match(F);if(m)fid=m[0];}
+  }
+  if(!name&&body){
+    const og=body.match(/<meta[^>]+content="([^"]+)"[^>]+property="og:title"/i)||body.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i);
+    if(og)name=htmlDecode(og[1]).split(" · ")[0].trim();
+  }
+  if(!fid)throw new Error("sin id");
+  return "https://www.google.com/maps/place/"+encodeURIComponent(name||"").replace(/%20/g,"+")+"/data=!1s"+fid;
+}
+async function tryProxy(make,short){
+  const {url,json}=make(short);
+  const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),10000);
+  try{
+    const res=await fetch(url,{signal:ctl.signal});
+    if(!res.ok)throw new Error("http "+res.status);
+    const text=await res.text();
+    if(json){const d=JSON.parse(text);return extract(d.status&&d.status.url,d.contents);}
+    return extract(res.headers.get("x-final-url")||"",text);
+  }finally{clearTimeout(t);}
+}
+async function resolveShort(short){
+  if(shortCache[short])return shortCache[short];
+  const long=await Promise.any(PROXIES.map(p=>tryProxy(p,short)));
+  shortCache[short]=long;
+  try{localStorage.setItem("shortCache",JSON.stringify(shortCache));}catch(e){}
+  return long;
+}
+let resolving=false;
+const GO_HTML=$("go").innerHTML;
+async function render(animate){
+  const raw=$("src").value.trim();
+  let dec=raw;try{dec=decodeURIComponent(raw);}catch(e){}
+  if(isShort(dec)){
+    const m=dec.match(/https?:\/\/[^\s]+/);const short=m?m[0]:dec;
+    if(shortCache[short])return show(parse(shortCache[short]),animate);
+    if(resolving)return;
+    resolving=true;$("go").disabled=true;$("go").textContent="Abriendo link corto…";$("msg").hidden=true;
+    try{const long=await resolveShort(short);show(parse(long),animate);}
+    catch(e){show({error:SHORT_HELP},animate);}
+    finally{resolving=false;$("go").disabled=false;$("go").innerHTML=GO_HTML;}
+    return;
+  }
+  show(parse(raw),animate);
+}
+function show(r,animate){
   if(r.error){
     $("msg").innerHTML=r.error;$("msg").hidden=true;void $("msg").offsetWidth;$("msg").hidden=false;
     $("result").hidden=true;return;
