@@ -6,7 +6,7 @@ Herramientas para conseguir más reseñas en Google.
 
 ## Páginas
 
-- **`index.html`: generador.** Pega el link de un negocio en Google Maps y obtienes:
+- **`index.html`: generador.** Pega el link de un negocio en Google Maps, elige si mandas a tus clientes a la página custom o directo a Google, y obtienes:
   - el link de la página para clientes, con el nombre del negocio y 5 estrellas marcadas
   - el link directo al formulario de reseña de Google
   - un código QR y un mensaje listo para WhatsApp

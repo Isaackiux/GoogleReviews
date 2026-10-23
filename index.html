@@ -92,6 +92,12 @@ button:focus-visible,a.btn:focus-visible{outline:3px solid var(--gold);outline-o
 textarea#note{width:100%;font:500 15px/1.5 var(--font-body);color:var(--ink);background:var(--sky);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;resize:vertical;min-height:150px;outline:none}
 textarea#note:focus{border-color:var(--gold)}
 .small{padding:11px 18px;font-size:15px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--sky);border:1.5px solid var(--line);border-radius:16px}
+.seg button{flex-direction:column;gap:2px;align-items:center;background:transparent;color:var(--muted);border-radius:12px;padding:11px 10px;font-size:15px;transition:background .25s,color .25s,transform .12s}
+.seg button span{font:500 12px var(--font-body);opacity:.8}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{color:#2a1700;background:linear-gradient(180deg,#ffd76a,var(--gold) 50%,var(--gold-2));box-shadow:0 4px 14px -4px rgba(255,159,28,.6)}
+.seg button[aria-pressed="true"] span{opacity:.75}
 .tip{display:flex;gap:12px;align-items:flex-start;background:rgba(255,200,61,.08);border-radius:14px;padding:14px 16px;font-size:14px;color:var(--muted)}
 .tip svg{flex:none;width:20px;height:20px;color:var(--gold);margin-top:1px}
 .tip b{color:var(--ink)}
@@ -127,6 +133,11 @@ textarea#note:focus{border-color:var(--gold)}
       </button>
       <button class="ghost" id="clear" type="button">Limpiar</button>
     </div>
+    <span class="lbl" id="modelbl">¿A dónde mandas a tus clientes?</span>
+    <div class="seg" role="group" aria-labelledby="modelbl">
+      <button type="button" id="mPage" aria-pressed="true">Página custom<span>5 estrellas marcadas</span></button>
+      <button type="button" id="mGoogle" aria-pressed="false">Solo Google<span>Directo al formulario</span></button>
+    </div>
     <p class="hint">Acepta links largos, links cortos de compartir (maps.app.goo.gl) y Place ID (ChIJ…).</p>
   </section>
 
@@ -142,7 +153,7 @@ textarea#note:focus{border-color:var(--gold)}
         <span class="chip" id="rbadge">Listo</span>
       </div>
 
-      <div class="block">
+      <div class="block" id="blkPage">
         <span class="lbl">Página para tus clientes · 5 estrellas marcadas</span>
         <div class="linkbox" id="pout"></div>
         <div class="btnrow">
@@ -151,12 +162,12 @@ textarea#note:focus{border-color:var(--gold)}
         </div>
       </div>
 
-      <div class="block">
+      <div class="block" id="blkGoogle">
         <span class="lbl">Link directo a Google</span>
         <div class="linkbox" id="out"></div>
         <div class="btnrow">
-          <button class="ghost small" id="copy" type="button">Copiar link</button>
-          <a class="btn ghost small" id="open" href="#" target="_blank" rel="noopener">Probar ↗</a>
+          <button class="gold" id="copy" type="button">Copiar link</button>
+          <a class="btn ghost" id="open" href="#" target="_blank" rel="noopener">Probar ↗</a>
         </div>
       </div>
 
@@ -174,7 +185,7 @@ textarea#note:focus{border-color:var(--gold)}
 
       <div class="tip">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#star"/></svg>
-        <span>Comparte la <b>página para clientes</b>: abre con el nombre de tu negocio y las 5 estrellas ya marcadas, y de ahí los lleva a Google a publicar.</span>
+        <span id="tiptxt"></span>
       </div>
       <p class="tech" id="tech"></p>
     </div>
@@ -185,7 +196,12 @@ textarea#note:focus{border-color:var(--gold)}
 <script>
 const EXAMPLE = "https://www.google.com/maps/place/Radec+Autopartes+CR+Tijuana/@32.4711472,-116.9283056,15z/data=!4m6!3m5!1s0x80d939184e8dc2e1:0x8d68897f4ee87a32!8m2!3d32.4713044!4d-116.9180772!16s%2Fg%2F11c2nplpfb";
 const $ = id => document.getElementById(id);
-let currentLink="",pageLink="";
+let currentLink="",pageLink="",lastR=null;
+let mode="page";try{mode=localStorage.getItem("mode")==="google"?"google":"page";}catch(e){}
+const TIPS={
+  page:"Tus clientes ven una página con el nombre de tu negocio y las 5 estrellas ya marcadas, y de ahí pasan a Google a publicar.",
+  google:"Tus clientes van directo al formulario de reseña de Google. Ahí tocan las estrellas y publican."
+};
 const PAGE=new URL("califica.html",location.href).href;
 function b64url(str){try{return btoa(unescape(encodeURIComponent(str))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}catch(e){return "";}}
 const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -285,6 +301,7 @@ async function render(animate){
   show(parse(raw),animate);
 }
 function show(r,animate){
+  if(!r.error)lastR=r;
   if(r.error){
     $("msg").innerHTML=r.error;$("msg").hidden=true;void $("msg").offsetWidth;$("msg").hidden=false;
     $("result").hidden=true;return;
@@ -299,15 +316,17 @@ function show(r,animate){
   $("rbadge").textContent=isEx?"Ejemplo":"Listo";
   $("rbadge").className="chip"+(isEx?" ex":"");
   $("tech").textContent="Place ID "+r.placeId;
-  $("note").value="¡Hola! 👋 Gracias por visitarnos"+(r.name?" en "+r.name:"")+". ¿Nos regalas tu opinión? Toma menos de un minuto:\n\n👉 "+pageLink+"\n\n¡Mil gracias! ⭐⭐⭐⭐⭐";
+  const target=mode==="page"?pageLink:link;
+  applyMode();
+  $("note").value="¡Hola! 👋 Gracias por visitarnos"+(r.name?" en "+r.name:"")+". ¿Nos regalas tu opinión? Toma menos de un minuto:\n\n👉 "+target+"\n\n¡Mil gracias! ⭐⭐⭐⭐⭐";
   $("qr").innerHTML="";
-  try{new QRCode($("qr"),{text:pageLink,width:300,height:300,colorDark:"#0d1033",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});}catch(e){$("qr").textContent="QR no disponible";}
+  try{new QRCode($("qr"),{text:target,width:300,height:300,colorDark:"#0d1033",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});}catch(e){$("qr").textContent="QR no disponible";}
   const res=$("result");
   res.hidden=false;
   const mr=res.querySelector(".minirow");
   if(animate&&!reduce){
     mr.classList.remove("static");res.classList.remove("enter");void res.offsetWidth;res.classList.add("enter");
-    typeOut($("pout"),pageLink);$("out").textContent=link;
+    if(mode==="page"){typeOut($("pout"),pageLink);$("out").textContent=link;}else{typeOut($("out"),link);$("pout").textContent=pageLink;}
     const b=$("go").getBoundingClientRect();burst(b.left+b.width/2,b.top+b.height/2,26);
     setTimeout(()=>{res.scrollIntoView({behavior:"smooth",block:"start"});},120);
   }else{
@@ -341,6 +360,22 @@ $("src").addEventListener("paste",()=>setTimeout(()=>render(true),0));
 $("src").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();render(true);}});
 $("clear").addEventListener("click",()=>{$("src").value="";$("result").hidden=true;$("msg").hidden=true;$("src").focus();});
 $("copy").addEventListener("click",()=>copy(currentLink,$("copy"),"Copiar link"));
+function applyMode(){
+  $("mPage").setAttribute("aria-pressed",mode==="page");$("mGoogle").setAttribute("aria-pressed",mode==="google");
+  $("blkPage").hidden=mode!=="page";$("blkGoogle").hidden=mode!=="google";
+  $("tiptxt").textContent=TIPS[mode];
+}
+function setMode(m){
+  if(m===mode)return;mode=m;try{localStorage.setItem("mode",m);}catch(e){}
+  applyMode();
+  if(lastR&&!$("result").hidden){
+    show(lastR,false);
+    if(!reduce){const box=m==="page"?$("pout"):$("out");typeOut(box,m==="page"?pageLink:currentLink);const q=$("qr");q.style.transform="rotate(4deg) scale(.92)";setTimeout(()=>q.style.transform="",180);}
+  }
+}
+$("mPage").addEventListener("click",()=>setMode("page"));
+$("mGoogle").addEventListener("click",()=>setMode("google"));
+applyMode();
 $("pcopy").addEventListener("click",()=>copy(pageLink,$("pcopy"),"Copiar página"));
 $("copynote").addEventListener("click",()=>copy($("note").value,$("copynote"),"Copiar mensaje"));
 
